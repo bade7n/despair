@@ -6,19 +6,28 @@ from despair.args import argumentParser
 from despair.network import Network
 import sys
 
-clean=0
-inventory = Inventory()
+clean = 0
+inventory_path = 'inventory.yml'
+identity_key = 'identity_key'
+
 
 def main(argv):
     global verbose
     global clean
+    global identity_key
 
     args = argumentParser()
     if args.verbose:
         verbose = 1
     if args.clean:
         clean = 1
-    
+    if args.inventory:
+        inventory_path = args.inventory
+    if args.identity_key:
+        identity_key = args.identity_key
+
+    inventory = Inventory(inventory_path)
+
     if args.authorized_keys:
         server = inventory.server(args.authorized_keys)
         syncAuthorizedKeys(server)
@@ -41,15 +50,23 @@ def main(argv):
     elif args.report:
         AllServersAction(inventory.allServers()).sudoerReport()
 
+
+def __server_action(server):
+    global identity_key
+    return ServerAction(server, identity_key)
+
+
 def syncNetwork(server):
     if "network" in server:
-        action = ServerAction(server)
+        action = __server_action(server)
         net = Network(action, server["network"])
         net.sync()
 
+
 def syncTasks(server):
-    action = ServerAction(server)
+    action = __server_action(server)
     __syncTasks(server, action)
+
 
 def __syncTasks(server, action):
     if clean:
@@ -57,7 +74,8 @@ def __syncTasks(server, action):
     for key, value in server.items():
         if key.endswith("_tasks"):
             __syncTask(key, value, action)
-            
+
+
 def __syncTask(key, value, action):
     print(f"Processing task {key}")
     update = True
@@ -67,25 +85,29 @@ def __syncTask(key, value, action):
                 action.aptGetUpdate()
             update = False
             action.syncPackages(task["packages"],
-                            repository=task["from-repository"] if "from-repository" in task else None,
-                            environment=task["environment"] if "environment" in task else None)
+                                repository=task["from-repository"] if "from-repository" in task else None,
+                                environment=task["environment"] if "environment" in task else None)
         elif "content" in task and "path" in task:
             action.syncContent(task["path"], task["content"])
         elif "repository" in task:
-            action.syncRepository(task["repository"], task["alias"] if "alias" in task else None, task["priority"] if "priority" in task else None)
+            action.syncRepository(task["repository"], task["alias"] if "alias" in task else None,
+                                  task["priority"] if "priority" in task else None)
             update = True
     if update:
         action.aptGetUpdate()
 
+
 def syncAll(server):
-    action = ServerAction(server)
+    action = __server_action(server)
     __syncUsers(server, action)
     __syncAuthorizedKeys(server, action)
     __syncTasks(server, action)
 
+
 def syncUsers(server):
-    action = ServerAction(server)
+    action = __server_action(server)
     __syncUsers(server, action)
+
 
 def __syncUsers(server, action):
     if "users" in server:
@@ -96,10 +118,10 @@ def __syncUsers(server, action):
             if "shell" in user_info:
                 action.syncUserShell(user, user_info["shell"])
             action.syncUserGroups(user, user_info["groups"] if "groups" in user_info else [])
-            
+
 
 def initServerConfiguration(inventory, server):
-    action = ServerAction(server)
+    action = __server_action(server)
     keys = inventory.mainKey()
     action.updateMainKey(server["user"], keys)
     action.syncManagedGroup()
@@ -109,6 +131,7 @@ def initServerConfiguration(inventory, server):
     if "hostname" in server:
         action.hostname(server["hostname"])
 
+
 def becomeSudoer(server, action, clean):
     if clean:
         action.cleanSudoers()
@@ -117,15 +140,18 @@ def becomeSudoer(server, action, clean):
         for sudoer in server["sudoers"]:
             action.becomeSudoer(sudoer)
 
+
 def syncAuthorizedKeys(server):
-    action = ServerAction(server)
+    action = __server_action(server)
     __syncAuthorizedKeys(server, action)
+
 
 def __syncAuthorizedKeys(server, action):
     for rule in server["authorized_keys"]:
-        keys = "\n".join(rule["keys"]) 
+        keys = "\n".join(rule["keys"])
         for user in rule["remote-users"]:
             action.updateKey(user, keys)
+
 
 if __name__ == "__main__":
     main(sys.argv)

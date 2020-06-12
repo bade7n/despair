@@ -13,4 +13,5 @@ def argumentParser():
     parser.add_argument("--network", help="syncronization network: iptables/ipsets", type=str)
     parser.add_argument("-a", "--all", help="syncronize everything: users, repositories, packages, authorization_keys without initialization", type=str)
     parser.add_argument("-i", "--identity-key", help="ssh connection identity path", type=str)
+    parser.add_argument("--inventory", help="inventory path (default: inventory.yml)", type=str)
     return parser.parse_args()

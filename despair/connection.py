@@ -4,16 +4,18 @@ import os
 verbose = 0
 ssh_bin = '/usr/local/bin/ssh'
 
+
 class RemoteConnection:
     """
     Basic methods to connect to servers, supports interactive and non-interactive ways.
     """
-    def __init__(self, server, identity_key_path = 'identity_key'):
+
+    def __init__(self, server, identity_key_path='identity_key'):
         self.server = server
         self.connection = self.__sshConnectionString()
         self.identity_key_path = identity_key_path
         pass
-    
+
     def __sshConnectionString(self):
         return self.server["user"] + '@' + self.server["ip"]
 
@@ -27,16 +29,16 @@ class RemoteConnection:
         port = 22
         if "port" in self.server:
             port = self.server["port"]
-        return [ssh_bin,'-p',f'{port}','-i',self.identity_key_path, self.connection, text]
+        return [ssh_bin, '-p', f'{port}', '-i', self.identity_key_path, self.connection, text]
 
     def __remoteInteractiveSshCommand(self, text):
         command = self.__remoteCommand(text)
-        command.insert(1,'-t')
+        command.insert(1, '-t')
         return command
 
-    def executeRemoteCommand(self, cmd, input = None, sudo = False, sudo_user = None):
+    def executeRemoteCommand(self, cmd, input=None, sudo=False, sudo_user=None):
         if sudo:
-            cmd = cmd.replace('"',r'\"')
+            cmd = cmd.replace('"', r'\"')
             if sudo_user:
                 cmd = f'sudo -u {sudo_user} bash -c "{cmd}"'
             else:
@@ -48,7 +50,7 @@ class RemoteConnection:
     def __execRemoteCommand(self, command, data):
         if verbose:
             print(f"Executing command: {command} with input {data}")
-        app = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, universal_newlines = True, bufsize=1)
+        app = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, universal_newlines=True, bufsize=1)
         out = app.communicate(input=data)
         if out[1]:
             print(f'''
@@ -57,27 +59,29 @@ class RemoteConnection:
     Stderr: {out[1]}
     ''')
         return CommandResult(out[0], out[1])
-    
+
     def __str__(self):
         return self.connection
-    
+
+
 class CommandResult:
     def __init__(self, stdout, stderr):
         self.stdout = stdout
         self.stderr = stderr
-    
+
     def out(self):
         return self.stdout.strip()
-    
+
     def err(self):
         return self.stderr
-    
+
     def __str__(self):
         return f'Stdout: {self.stdout}\nStderr:{self.stderr}'
-    
+
     def ok(self):
         return not self.stderr
 
     def __bool__(self):
         return not self.stderr
-    __nonzero__=__bool__
+
+    __nonzero__ = __bool__

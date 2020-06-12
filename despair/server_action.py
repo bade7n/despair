@@ -6,9 +6,9 @@ prefix = "19"
 
 
 class ServerAction:
-    def __init__(self, server):
+    def __init__(self, server, identity_key):
         self.server = server
-        self.connection = RemoteConnection(server)
+        self.connection = RemoteConnection(server, identity_key)
 
     def changeChainDefaultPolicy(self, table, chain, policy):
         self.__exec(f' iptables -t {table} -P {chain} {policy}', sudo=True)
@@ -67,7 +67,8 @@ Pin-Priority: {priority}
         env = self.__make_env(environment)
         if to_install:
             install_string = self.__package_oneline(to_install, with_version=True)
-            result = self.__exec(f'{env} apt-get install -qqy {f"-t {repository}" if repository else ""} {install_string}', sudo=True)
+            result = self.__exec(
+                f'{env} apt-get install -qqy {f"-t {repository}" if repository else ""} {install_string}', sudo=True)
         else:
             print(f"Nothing to install from requested: {oneline}")
 
@@ -101,7 +102,6 @@ Pin-Priority: {priority}
                 to_install.append(package)
 
         return (to_install, to_remove)
-
 
     def syncManagedGroup(self):
         return self.syncGroup(despair_group, True)
@@ -205,6 +205,7 @@ class AllServersAction:
                     print(text, end='')
             print('All users: ', ','.join(sorted(users)))
 
+
 class PackageInfo:
     def __init__(self, str):
         info = {}
@@ -224,10 +225,9 @@ class PackageInfo:
                 info[name]["versions"].append(version)
                 if options and "installed" in options:
                     info[name]["installed"] = True
-                    info[name]["installed_version"] =version
+                    info[name]["installed_version"] = version
             except Exception as e:
                 print("Error while parsing response: ", line)
-
 
     def is_installed(self, name):
         if name in self.info and "installed" in self.info[name] and self.info[name]["installed"]:
@@ -235,6 +235,6 @@ class PackageInfo:
         else:
             return False
 
-    def installed_version(self,name):
+    def installed_version(self, name):
         if name in self.info and self.info[name]["installed"]:
             return self.info[name]["installed_version"]
