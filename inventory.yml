@@ -1,0 +1,162 @@
+
+users:
+  main: &main
+    keys:
+  vi: &vi
+    login: vi
+    ip:
+      - &personal_ip 127.0.0.1
+    main_keys: &vi_main_keys |-
+      ssh-ed25519 <KEY>
+    hardware_keys: &vi_hw_keys |-
+      sk-ecdsa-sha2-nistp256@openssh.com <KEY1>
+    git_keys: &vi_git_keys |-
+      no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty sk-ecdsa-sha2-nistp256@openssh.com <KEY1>
+hosts:
+  - &x_ip 127.0.0.1
+  - &x1_ip 127.0.0.1
+  - &x2_ip 127.0.0.1
+      
+default: &default
+  main-key: ssh-rsa key for the server user
+
+software:
+  non-interactive: &non-interactive
+    DEBIAN_FRONTEND: noninteractive
+  debian-buster: &buster
+    os: debian
+    release: buster
+    buster_tasks:
+      - task: Add Testing repositories
+        repository: |-
+          deb [arch=amd64] http://deb.debian.org/debian testing main non-free contrib
+          deb-src [arch=amd64] http://deb.debian.org/debian testing main non-free contrib
+        alias: testing
+        priority: 300
+      - task: Add Docker repositories
+        repository: deb [arch=amd64] https://download.docker.com/linux/debian buster stable
+        alias: docker-buster
+      - task: Install wget
+        packages:
+          - name: wget
+            version: 1.20.3-1+b2
+      - task: Install basic packages
+        packages:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg2
+          - gnupg-agent
+          - software-properties-common 
+      - task: Install standard packages
+        packages: [vim, atop, curl, wget, net-tools, iptables, ipset, iptables-persistent, ipset-persistent, fail2ban, sudo, git, tmux, sqlite3]
+      - task: Install OpenSSH server 8.2
+        packages: [ openssh-server ]
+        from-repository: testing
+        environment:
+          <<: *non-interactive
+      - task: Install Docker APT key
+        scripts:
+          docker: |-
+            curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+            apt-key fingerprint 0EBFCD88
+      - task: Install Docker
+        packages: [ docker-ce ]
+        environment:
+          <<: *non-interactive
+
+network:
+  ipsets: &ipsets_default
+    sysadmin:
+      options: hash:ip family inet hashsize 1024 maxelem 65536
+      entries:
+        - 127.0.0.1
+        - 127.0.0.1
+    internal-network:
+      options: hash:ip family inet hashsize 1024 maxelem 65536
+      entries:
+        - 127.0.0.1
+  iptables: &iptables_default
+    filter:
+      OUTPUT:
+        policy: ACCEPT
+      FORWARD:
+        policy: DROP
+        skip: true
+        rules:
+          - -j DOCKER-USER
+          - -j DOCKER-ISOLATION-STAGE-1
+          - -o docker0 -m conntrack --ctstate RELATED,ESTABLISHED
+          - -o docker0 -j DOCKER
+          - -o docker0 -j DOCKER
+          - -i docker0 ! -o docker0
+          - -i docker0 -o docker0
+      INPUT:
+        policy: DROP
+        flush: true
+        rules:
+          - -i lo 
+          - -m conntrack --ctstate INVALID -j DROP
+          - -m conntrack --ctstate RELATED,ESTABLISHED
+          - -m set --match-set sysadmin src
+          - -m set --match-set internal-network src
+          - -p tcp -m tcp --dport 22
+          - -p icmp -m icmp --icmp-type 8 -m comment --comment "ICMP Ping"
+          - -j REJECT --reject-with icmp-port-unreachable
+      DOCKER-USER:
+        # policy: 
+        rules:
+          - -p tcp -m multiport --dports 80,443
+          - -m conntrack --ctstate ESTABLISHED -j RETURN
+          - -m set --match-set sysadmin src
+          - -m set --match-set internal-network src
+          - -i %if% -j DROP
+          - -j RETURN
+      LOGGING:
+        rules:
+          - -m limit --limit 2/min -j LOG --log-prefix iptables_dropped
+          - -j DROP
+
+remote-users:
+  git: &git
+    shell: /usr/bin/git-shell
+  control: &control
+    groups: [ docker ]
+
+servers:
+  testbox:
+    <<: *buster
+    user: vagrant
+    network:
+      iptables:
+        <<: *iptables_default
+      ipsets:
+        <<: *ipsets_default
+    ip: 127.0.0.1
+    port: 2222
+  host_alias1:
+    <<: *buster
+    ip: *x1_ip
+    user: vladimiri
+    hostname: fqdn1.example.com
+    authorized_keys:
+      - remote-users: [ vladimiri, root ]
+        keys: [ *vi_main_keys, *vi_hw_keys ]
+  x2.deta.pro:
+    <<: *buster
+    network:
+      iptables:
+        <<: *iptables_default
+      ipsets:
+        <<: *ipsets_default
+    ip: *x2_ip
+    user: vladimiri
+    hostname: fqdn2.example.com
+    users:
+      git: *git
+      control: *control
+    authorized_keys:
+      - remote-users: [ vladimiri, root ]
+        keys: [ *vi_main_keys, *vi_hw_keys ]
+      - remote-users: [ git ]
+        keys: [ *vi_git_keys ]
