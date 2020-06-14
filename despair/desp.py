@@ -4,6 +4,7 @@ from despair.server_action import ServerAction, AllServersAction
 from despair.inventory import Inventory
 from despair.args import argumentParser
 from despair.network import Network
+
 import sys
 
 clean = 0
