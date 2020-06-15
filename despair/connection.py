@@ -23,7 +23,7 @@ class RemoteConnection:
         if verbose:
             print(f"Executing interactive command: {cmd}")
         command = self.__remoteInteractiveSshCommand(cmd)
-        return run(command, input=input, capture_output=capture_output)
+        return CommandResult(run(command, input=input.encode(), capture_output=capture_output))
 
     def __remoteCommand(self, text):
         port = 22
@@ -58,16 +58,25 @@ class RemoteConnection:
     Stdout: {out[0]} 
     Stderr: {out[1]}
     ''')
-        return CommandResult(out[0], out[1])
+        return CommandResult(out)
 
     def __str__(self):
         return self.connection
 
 
 class CommandResult:
-    def __init__(self, stdout, stderr):
-        self.stdout = stdout
-        self.stderr = stderr
+    def __init__(self, out):
+        if "returncode" in out:
+            self.is_ok = out.returncode == 0
+            self.returncode = out.returncode
+            self.stdout = out.stdout
+            self.stderr = out.stderr
+        else:
+            self.is_ok = not out[1]
+            self.returncode = -1
+            self.stdout = out[0]
+            self.stderr = out[1]
+
 
     def out(self):
         return self.stdout.strip()
@@ -79,7 +88,7 @@ class CommandResult:
         return f'Stdout: {self.stdout}\nStderr:{self.stderr}'
 
     def ok(self):
-        return not self.stderr
+        return self.is_ok
 
     def __bool__(self):
         return not self.stderr

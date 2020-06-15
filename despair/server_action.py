@@ -1,4 +1,4 @@
-from despair.connection import RemoteConnection
+from .connection import RemoteConnection
 import re
 
 despair_group = "despair"
@@ -47,8 +47,11 @@ Pin-Priority: {priority}
         if permissions:
             self.__exec(f"chmod 0{permissions} {path}", sudo=True)
 
-    def __exec(self, cmd, sudo=False, input=None, sudo_user=None, quiet=False):
-        result = self.connection.executeRemoteCommand(cmd, input=input, sudo=sudo, sudo_user=sudo_user)
+    def __exec(self, cmd, sudo=False, input=None, sudo_user=None, quiet=False, interactive=False):
+        if interactive:
+            result = self.connection.execRemoteInteractiveCommand(cmd, input=input, capture_output=True)
+        else:
+            result = self.connection.executeRemoteCommand(cmd, input=input, sudo=sudo, sudo_user=sudo_user)
         if not result.ok():
             print(f'Error while executing command: {cmd}')
             print(str(result))
@@ -150,7 +153,7 @@ Pin-Priority: {priority}
 
     def updateMainKey(self, user, keys):
         print(f'Updating main key for {user} on {self.connection}')
-        return self.__exec(f'umask 0077 && mkdir -p .ssh && cat > .ssh/authorized_keys', input=keys)
+        return self.__exec(f'umask 0077 && mkdir -p .ssh && cat > .ssh/authorized_keys', input=keys, interactive=True)
 
     def hostname(self, hostname):
         self.__exec(f'''hostnamectl set-hostname {hostname}''', sudo=True)

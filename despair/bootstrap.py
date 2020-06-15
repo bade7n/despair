@@ -1,18 +1,19 @@
-#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-from despair.server_action import ServerAction, AllServersAction
-from despair.inventory import Inventory
-from despair.args import argumentParser
-from despair.network import Network
+__version__ = "0.0.1"
 
-import sys
+from .server_action import ServerAction, AllServersAction
+from .inventory import Inventory
+from .args import argumentParser
+from .network import Network
+import subprocess
 
 clean = 0
 inventory_path = 'inventory.yml'
 identity_key = 'identity_key'
 
 
-def main(argv):
+def main():
     global verbose
     global clean
     global identity_key
@@ -123,7 +124,7 @@ def __syncUsers(server, action):
 
 def initServerConfiguration(inventory, server):
     action = __server_action(server)
-    keys = inventory.mainKey()
+    keys = __get_public_key()
     action.updateMainKey(server["user"], keys)
     action.syncManagedGroup()
     becomeSudoer(server, action, clean)
@@ -131,6 +132,11 @@ def initServerConfiguration(inventory, server):
         action.cloudHostname(server["cloud_hostname"])
     if "hostname" in server:
         action.hostname(server["hostname"])
+
+def __get_public_key():
+    global identity_key
+    public_key = subprocess.run(f'ssh-keygen -y -f {identity_key}', shell=True, capture_output=True)
+    return public_key.stdout.decode()
 
 
 def becomeSudoer(server, action, clean):
@@ -151,8 +157,7 @@ def __syncAuthorizedKeys(server, action):
     for rule in server["authorized_keys"]:
         keys = "\n".join(rule["keys"])
         for user in rule["remote-users"]:
+            if user == server["user"]:
+                keys += "\n" + __get_public_key()
             action.updateKey(user, keys)
 
-
-if __name__ == "__main__":
-    main(sys.argv)
