@@ -1,4 +1,4 @@
-from subprocess import Popen, PIPE, STDOUT, call, run
+from subprocess import Popen, PIPE, STDOUT, call, run, CompletedProcess
 import os
 
 verbose = 0
@@ -66,7 +66,7 @@ class RemoteConnection:
 
 class CommandResult:
     def __init__(self, out):
-        if "returncode" in out:
+        if type(out) is CompletedProcess:
             self.is_ok = out.returncode == 0
             self.returncode = out.returncode
             self.stdout = out.stdout

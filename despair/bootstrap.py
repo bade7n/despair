@@ -6,17 +6,13 @@ from .server_action import ServerAction, AllServersAction
 from .inventory import Inventory
 from .args import argumentParser
 from .network import Network
-import subprocess
 
 clean = 0
 inventory_path = 'inventory.yml'
-identity_key = 'identity_key'
-
 
 def main():
     global verbose
     global clean
-    global identity_key
 
     args = argumentParser()
     if args.verbose:
@@ -25,58 +21,44 @@ def main():
         clean = 1
     if args.inventory:
         inventory_path = args.inventory
-    if args.identity_key:
-        identity_key = args.identity_key
 
     inventory = Inventory(inventory_path)
 
     if args.authorized_keys:
-        server = inventory.server(args.authorized_keys)
-        syncAuthorizedKeys(server)
+        action = inventory.server_action(args.authorized_keys)
+        syncAuthorizedKeys(action)
     elif args.init:
-        server = inventory.server(args.init)
-        initServerConfiguration(inventory, server)
-        syncUsers(server)
+        action = inventory.server_action(args.init)
+        initServerConfiguration(action)
+        __syncUsers(action)
     elif args.all:
-        server = inventory.server(args.all)
-        syncAll(server)
+        action = inventory.server_action(args.all)
+        syncAll(action)
     elif args.users:
-        server = inventory.server(args.users)
-        syncUsers(server)
+        action = inventory.server_action(args.users)
+        __syncUsers(action)
     elif args.tasks:
-        server = inventory.server(args.tasks)
-        syncTasks(server)
+        action = inventory.server_action(args.tasks)
+        __syncTasks(action)
     elif args.network:
-        server = inventory.server(args.network)
-        syncNetwork(server)
+        action = inventory.server_action(args.network)
+        syncNetwork(action)
     elif args.report:
         AllServersAction(inventory.allServers()).sudoerReport()
 
 
-def __server_action(server):
-    global identity_key
-    return ServerAction(server, identity_key)
 
-
-def syncNetwork(server):
-    if "network" in server:
-        action = __server_action(server)
-        net = Network(action, server["network"])
+def syncNetwork(action):
+    if "network" in action.server:
+        net = Network(action, action.server["network"])
         net.sync()
 
-
-def syncTasks(server):
-    action = __server_action(server)
-    __syncTasks(server, action)
-
-
-def __syncTasks(server, action):
+def __syncTasks(action):
     if clean:
         action.cleanRepositories()
-    for key, value in server.items():
+    for key, value in action.server.items():
         if key.endswith("_tasks"):
             __syncTask(key, value, action)
-
 
 def __syncTask(key, value, action):
     print(f"Processing task {key}")
@@ -98,22 +80,14 @@ def __syncTask(key, value, action):
     if update:
         action.aptGetUpdate()
 
+def syncAll(action):
+    __syncUsers(action)
+    __syncAuthorizedKeys(action)
+    __syncTasks(action)
 
-def syncAll(server):
-    action = __server_action(server)
-    __syncUsers(server, action)
-    __syncAuthorizedKeys(server, action)
-    __syncTasks(server, action)
-
-
-def syncUsers(server):
-    action = __server_action(server)
-    __syncUsers(server, action)
-
-
-def __syncUsers(server, action):
-    if "users" in server:
-        for user, user_info in server["users"].items():
+def __syncUsers(action):
+    if "users" in action.server:
+        for user, user_info in action.server["users"].items():
             action.sync_user(user)
             if "group" in user_info:
                 action.syncUserGroup(user, user_info["group"])
@@ -121,43 +95,33 @@ def __syncUsers(server, action):
                 action.syncUserShell(user, user_info["shell"])
             action.syncUserGroups(user, user_info["groups"] if "groups" in user_info else [])
 
-
-def initServerConfiguration(inventory, server):
-    action = __server_action(server)
-    keys = __get_public_key()
-    action.updateMainKey(server["user"], keys)
+def initServerConfiguration(action):
+    action.updateMainKey(action.server["user"], action.server["public_key"])
     action.syncManagedGroup()
-    becomeSudoer(server, action, clean)
-    if "cloud_hostname" in server:
-        action.cloudHostname(server["cloud_hostname"])
-    if "hostname" in server:
-        action.hostname(server["hostname"])
+    becomeSudoer(action, clean)
+    if "cloud_hostname" in action.server:
+        action.cloudHostname(action.server["cloud_hostname"])
+    if "hostname" in action.server:
+        action.hostname(action.server["hostname"])
 
-def __get_public_key():
-    global identity_key
-    public_key = subprocess.run(f'ssh-keygen -y -f {identity_key}', shell=True, capture_output=True)
-    return public_key.stdout.decode()
-
-
-def becomeSudoer(server, action, clean):
+def becomeSudoer(action, clean):
     if clean:
         action.cleanSudoers()
-    action.becomeMainSudoer(server["user"])
-    if "sudoers" in server:
-        for sudoer in server["sudoers"]:
+    action.becomeMainSudoer(action.server["user"])
+    if "sudoers" in action.server:
+        for sudoer in action.server["sudoers"]:
             action.becomeSudoer(sudoer)
 
 
-def syncAuthorizedKeys(server):
-    action = __server_action(server)
-    __syncAuthorizedKeys(server, action)
+def syncAuthorizedKeys(action):
+    __syncAuthorizedKeys(action)
 
-
-def __syncAuthorizedKeys(server, action):
+def __syncAuthorizedKeys(action):
+    server = action.server
     for rule in server["authorized_keys"]:
         keys = "\n".join(rule["keys"])
         for user in rule["remote-users"]:
             if user == server["user"]:
-                keys += "\n" + __get_public_key()
+                keys += "\n" + server["public_key"]
             action.updateKey(user, keys)
 

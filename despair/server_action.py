@@ -6,9 +6,9 @@ prefix = "19"
 
 
 class ServerAction:
-    def __init__(self, server, identity_key):
+    def __init__(self, server, identity_key_path):
         self.server = server
-        self.connection = RemoteConnection(server, identity_key)
+        self.connection = RemoteConnection(server, identity_key_path)
 
     def changeChainDefaultPolicy(self, table, chain, policy):
         self.__exec(f' iptables -t {table} -P {chain} {policy}', sudo=True)

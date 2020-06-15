@@ -16,9 +16,6 @@ hosts:
   - &x_ip 127.0.0.1
   - &x1_ip 127.0.0.1
   - &x2_ip 127.0.0.1
-      
-default: &default
-  main-key: ssh-rsa key for the server user
 
 software:
   non-interactive: &non-interactive
@@ -123,40 +120,42 @@ remote-users:
   control: &control
     groups: [ docker ]
 
-servers:
-  testbox:
-    <<: *buster
-    user: vagrant
-    network:
-      iptables:
-        <<: *iptables_default
-      ipsets:
-        <<: *ipsets_default
-    ip: 127.0.0.1
-    port: 2222
-  host_alias1:
-    <<: *buster
-    ip: *x1_ip
-    user: vladimiri
-    hostname: fqdn1.example.com
-    authorized_keys:
-      - remote-users: [ vladimiri, root ]
-        keys: [ *vi_main_keys, *vi_hw_keys ]
-  x2.deta.pro:
-    <<: *buster
-    network:
-      iptables:
-        <<: *iptables_default
-      ipsets:
-        <<: *ipsets_default
-    ip: *x2_ip
-    user: vladimiri
-    hostname: fqdn2.example.com
-    users:
-      git: *git
-      control: *control
-    authorized_keys:
-      - remote-users: [ vladimiri, root ]
-        keys: [ *vi_main_keys, *vi_hw_keys ]
-      - remote-users: [ git ]
-        keys: [ *vi_git_keys ]
+inventory:
+  identity_key: id_ed25519, id_ecdsa, id_dsa, id_rsa
+  servers:
+    testbox:
+      <<: *buster
+      user: vagrant
+      network:
+        iptables:
+          <<: *iptables_default
+        ipsets:
+          <<: *ipsets_default
+      ip: 127.0.0.1
+      port: 2222
+    host_alias1:
+      <<: *buster
+      ip: *x1_ip
+      user: vladimiri
+      hostname: fqdn1.example.com
+      authorized_keys:
+        - remote-users: [ vladimiri, root ]
+          keys: [ *vi_main_keys, *vi_hw_keys ]
+    x2.deta.pro:
+      <<: *buster
+      network:
+        iptables:
+          <<: *iptables_default
+        ipsets:
+          <<: *ipsets_default
+      ip: *x2_ip
+      user: vladimiri
+      hostname: fqdn2.example.com
+      users:
+        git: *git
+        control: *control
+      authorized_keys:
+        - remote-users: [ vladimiri, root ]
+          keys: [ *vi_main_keys, *vi_hw_keys ]
+        - remote-users: [ git ]
+          keys: [ *vi_git_keys ]
