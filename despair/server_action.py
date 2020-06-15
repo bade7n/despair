@@ -163,7 +163,7 @@ Pin-Priority: {priority}
         self.hostname(hostname)
 
     def cleanSudoers(self):
-        self.__exec(f'rm -rf /etc/sudoers.d/{prefix}* "', sudo=True)
+        self.__exec(f'rm -rf /etc/sudoers.d/{prefix}*', sudo=True)
 
     def becomeSudoer(self, sudoer):
         print(f'{sudoer} becomes sudoer on {self.connection}')
