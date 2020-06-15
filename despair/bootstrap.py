@@ -30,7 +30,6 @@ def main():
     elif args.init:
         action = inventory.server_action(args.init)
         initServerConfiguration(action)
-        __syncUsers(action)
     elif args.all:
         action = inventory.server_action(args.all)
         syncAll(action)
@@ -97,6 +96,7 @@ def __syncUsers(action):
 
 def initServerConfiguration(action):
     action.updateMainKey(action.server["user"], action.server["public_key"])
+    action.becomeMainSudoer(action.server["user"])
     action.syncManagedGroup()
     becomeSudoer(action, clean)
     if "cloud_hostname" in action.server:
@@ -107,7 +107,6 @@ def initServerConfiguration(action):
 def becomeSudoer(action, clean):
     if clean:
         action.cleanSudoers()
-    action.becomeMainSudoer(action.server["user"])
     if "sudoers" in action.server:
         for sudoer in action.server["sudoers"]:
             action.becomeSudoer(sudoer)

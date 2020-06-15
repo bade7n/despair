@@ -23,7 +23,9 @@ class RemoteConnection:
         if verbose:
             print(f"Executing interactive command: {cmd}")
         command = self.__remoteInteractiveSshCommand(cmd)
-        return CommandResult(run(command, input=input.encode(), capture_output=capture_output))
+        if input:
+            input = input.encode()
+        return CommandResult(run(command, input=input, capture_output=capture_output))
 
     def __remoteCommand(self, text):
         port = 22

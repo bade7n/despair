@@ -153,7 +153,7 @@ Pin-Priority: {priority}
 
     def updateMainKey(self, user, keys):
         print(f'Updating main key for {user} on {self.connection}')
-        return self.__exec(f'umask 0077 && mkdir -p .ssh && cat > .ssh/authorized_keys', input=keys, interactive=True)
+        return self.__exec(f'umask 0077 && mkdir -p .ssh && cat > .ssh/authorized_keys', input=keys)
 
     def hostname(self, hostname):
         self.__exec(f'''hostnamectl set-hostname {hostname}''', sudo=True)
@@ -176,7 +176,7 @@ Pin-Priority: {priority}
             return
         print(f'{user} becomes sudoer on {self.connection}')
         return self.__exec(
-            f'''su - -c "echo '{user} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/{prefix}-{user}-auto && chmod 0440 /etc/sudoers.d/{prefix}-{user}-auto"''')
+            f'''su - -c "apt-get update && apt install -qqy sudo && echo '{user} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/{prefix}-{user}-auto && chmod 0440 /etc/sudoers.d/{prefix}-{user}-auto"''', interactive=True)
 
     def __checkHasSudo(self, user):
         result = self.__exec(f'''sudo id >/dev/null 2>/dev/null && echo True || echo False''').out()
