@@ -3,6 +3,8 @@ class Network:
     def __init__(self, action, network):
         self.action = action
         self.network = network
+        self.ipName = self.action.activeIpAndName()
+
     
     def sync(self):
         self.action.syncPackages(["ipset"])
@@ -38,8 +40,8 @@ class Network:
                 for rule in val["rules"]:
                     text += f'-A {chain} {rule} {"-j ACCEPT" if "-j" not in rule else ""}\n'
         text += "COMMIT\n"
-        print(text)
-        self.action.restoreIptables(text)
+        text1 = text.replace('%if%', self.ipName.interface)
+        self.action.restoreIptables(text1)
 
     def __updateSet(self, key, value):
         self.action.createIpset(key, value["options"])

@@ -69,8 +69,8 @@ class CommandResult:
         if type(out) is CompletedProcess:
             self.is_ok = out.returncode == 0
             self.returncode = out.returncode
-            self.stdout = out.stdout
-            self.stderr = out.stderr
+            self.stdout = out.stdout.decode()
+            self.stderr = out.stderr.decode()
         else:
             self.is_ok = not out[1]
             self.returncode = -1

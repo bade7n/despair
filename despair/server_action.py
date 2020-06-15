@@ -182,9 +182,17 @@ Pin-Priority: {priority}
         result = self.__exec(f'''sudo id >/dev/null 2>/dev/null && echo True || echo False''').out()
         return result == "True"
 
+    def activeIpAndName(self):
+        result = self.__exec('ip route get 8.8.8.8 | head -n1 | awk \'{print $5}{print $7}\'')
+        return IpAndName(*result.out().split("\n"))
+
     def __str__(self):
         return self.connection
 
+class IpAndName:
+    def __init__(self, interface, ip):
+        self.ip = ip
+        self.interface = interface
 
 class AllServersAction:
     def __init__(self, servers):
