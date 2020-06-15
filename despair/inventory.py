@@ -33,7 +33,9 @@ class Inventory:
     def __get_public_key(self):
         identity_key = self.__mainKey()
         public_key = subprocess.run(f'ssh-keygen -y -f {identity_key}', shell=True, capture_output=True)
-        return public_key.stdout.decode()
+        key_contents = public_key.stdout.decode()
+        arr = key_contents.rsplit(' ', 1)
+        return f'{arr[0]} inventory@despair\n'
 
     def server_action(self, server_name):
         server = self.server(server_name)
