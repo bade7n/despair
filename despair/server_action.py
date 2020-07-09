@@ -10,6 +10,9 @@ class ServerAction:
         self.server = server
         self.connection = RemoteConnection(server, identity_key_path)
 
+    def execScript(self, script, sudo=None):
+        self.__exec(f' {script}', sudo=sudo if sudo else None)
+
     def changeChainDefaultPolicy(self, table, chain, policy):
         self.__exec(f' iptables -t {table} -P {chain} {policy}', sudo=True)
 

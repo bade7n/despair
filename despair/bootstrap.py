@@ -76,6 +76,8 @@ def __syncTask(key, value, action):
             action.syncRepository(task["repository"], task["alias"] if "alias" in task else None,
                                   task["priority"] if "priority" in task else None)
             update = True
+        elif "script" in task:
+            action.execScript(task["script"], task["sudo"] if "sudo" in task else None)
     if update:
         action.aptGetUpdate()
 
