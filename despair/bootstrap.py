@@ -82,9 +82,9 @@ def __syncTask(key, value, action):
         action.aptGetUpdate()
 
 def syncAll(action):
-    __syncUsers(action)
     __syncAuthorizedKeys(action)
     __syncTasks(action)
+    __syncUsers(action)
 
 def __syncUsers(action):
     if "users" in action.server:
@@ -98,6 +98,7 @@ def __syncUsers(action):
 
 def initServerConfiguration(action):
     action.updateMainKey(action.server["user"], action.server["public_key"])
+
     action.becomeMainSudoer(action.server["user"])
     action.syncManagedGroup()
     becomeSudoer(action, clean)

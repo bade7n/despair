@@ -179,7 +179,7 @@ Pin-Priority: {priority}
             return
         print(f'{user} becomes sudoer on {self.connection}')
         return self.__exec(
-            f'''su - -c "apt-get update && apt install -qqy sudo && echo '{user} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/{prefix}-{user}-auto && chmod 0440 /etc/sudoers.d/{prefix}-{user}-auto"''', interactive=True)
+            f'''su - -c "apt-get update && apt install -qqy sudo && echo '{user} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/despair-{prefix}-{user}-auto && chmod 0440 /etc/sudoers.d/despair-{prefix}-{user}-auto"''', interactive=True)
 
     def __checkHasSudo(self, user):
         result = self.__exec(f'''sudo id >/dev/null 2>/dev/null && echo True || echo False''').out()
